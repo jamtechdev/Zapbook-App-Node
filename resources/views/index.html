@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Socket</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"
+        integrity="sha512-zoJXRvW2gC8Z0Xo3lBbao5+AS3g6YWr5ztKqaicua11xHo+AvE1b0lT9ODgrHTmNUxeCw0Ry4BGRYZfXu70weg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+    <h1>Node Socket IO</h1>
+    <script>
+        const socket = io('http://localhost:3000'); // Just provide the base URL
+
+        socket.on('connect', () => {
+            console.log('Connected to the server');
+            // Emit your events after connecting
+            socket.emit('participants', { booking_id: 14 });
+            socket.emit('assign_targets', {
+                booking_id: 14,
+                participants_id: 462,
+                target: 'right'
+            });
+            socket.emit('bookables');
+            socket.emit('lane');
+        });
+        socket.on('participantsList', (data) => {
+            console.log('Initial participants:', data);
+        });
+        socket.on('assignTargets', (data) => {
+            console.log('assign target:', data);
+        });
+        socket.on('all_bookables', (data) => {
+            console.log('Bookables:', data);
+        });
+        socket.on('all_lanes', (data) => {
+            console.log('Lanes:', data);
+        });
+        socket.on('validation_error', (error) => {
+            console.log('Validation Error:', error);
+        });
+    </script>
+</body>
+
+</html>

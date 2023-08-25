@@ -1,0 +1,17 @@
+# npm init -y
+# npm i express
+# npm i socket.io
+# npm i -g nodemon
+# npm i dotenv
+# npm install --save sequelize
+# npm install mysql2
+# npm i body-parser
+
+
+
+# connect with server
+ssh zapnode@108.61.128.94 -p 2208
+
+# to start and stop server 
+forever start server.js
+forever stop server.js
