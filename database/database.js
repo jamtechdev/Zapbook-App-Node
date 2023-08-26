@@ -19,20 +19,18 @@ db.User = require("../models/User")(sequelize, DataTypes);
 db.Booking = require("../models/Booking")(sequelize, DataTypes);
 db.Bookable = require("../models/Bookable")(sequelize, DataTypes);
 db.Lane = require("../models/Lane")(sequelize, DataTypes);
-
-
-
+db.ParticipantStat = require('../models/ParticipantStat')(sequelize, DataTypes);
 db.Participants = require("../models/Participants")(sequelize, DataTypes);
 db.ParticipantTeams = require("../models/ParticipantTeams")(sequelize, DataTypes);
 db.CustomerDetails = require("../models/CustomerDetails")(sequelize, DataTypes);
 db.Overall = require("../models/Overall")(sequelize, DataTypes);
+db.GameScore = require('../models/GameScore')(sequelize, DataTypes);
+db.BookingBookable = require('../models/BookingBookable')(sequelize, DataTypes);
+db.Experience = require('../models/Experience')(sequelize, DataTypes);
 
 /* Association or Relation between tables  */
 const ParticipantsAssociation = require('./association/ParticipantsAssociation');
-// // const productAssociations = require('./association/Product');
 ParticipantsAssociation(db);
-// productAssociations(db);
-// Define associations
 
 (async () => {
   try {
