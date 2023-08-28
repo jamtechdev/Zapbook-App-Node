@@ -18,7 +18,7 @@
         socket.on('connect', () => {
             console.log('Connected to the server');
             // Emit your events after connecting
-            // socket.emit('participants', { booking_id: '' });
+            socket.emit('participants', { booking_id: 46 });
             // socket.emit('assign_targets', {
             //     booking_id: 14,
             //     participants_id: 462,
@@ -28,23 +28,24 @@
             //     booking_id: 14
             // });
 
-            // socket.emit('playing', {
-            //     booking_id: 46,
-            //     participant_id: 466,
-            //     status: 'hit',
-            //     score: 'green',
-            //     game_id: 2,
-            // })
+             //socket.emit('playing', {
+               //  booking_id: 46,
+                // participant_id: 466,
+                // status: 'hit',
+                // score: 'green',
+                // game_id: 2,
+             //})
 
-            socket.emit('games', {
-                lane_id: 14,
-                location_id: 1,
-            });
+           // socket.emit('games', {
+             //   lane_id: 14,
+               // location_id: 1,
+                //lane_id: 7
+            //});
 
         });
-        // socket.on('participantsList', (data) => {
-        //     console.log('Initial participants:', data);
-        // });
+        socket.on('participantsList', (data) => {
+          console.log('Initial participants:', data);
+        });
         // socket.on('assignTargets', (data) => {
         //     console.log('assign target:', data);
         // });
@@ -54,13 +55,13 @@
         // socket.on('winnerList', (data) => {
         //     console.log('winner_lists:', data);
         // });
-        // socket.on('PlayingTime', (data) => {
-        //     console.log("Playing time ", data);
-        // });
+        socket.on('PlayingTime', (data) => {
+             console.log("Playing time ", data);
+         });
 
-        socket.on('gameList', (data) => {
-            console.log("games", data);
-        });
+        //socket.on('gameList', (data) => {
+         //   console.log("games", data);
+        //});
 
     </script>
 </body>

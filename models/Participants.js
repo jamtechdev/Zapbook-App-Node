@@ -1,7 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
     const Participants = sequelize.define("Participants", {
         booking_id: {
-            type: DataTypes.INTEGER
+            type: DataTypes.INTEGER,
+            allowNull:true
         },
         location_id: {
             type: DataTypes.INTEGER,

@@ -10,6 +10,8 @@ const Participants = db.Participants;
 const CustomerDetails = db.CustomerDetails;
 const ParticipantTeams = db.ParticipantTeams;
 const Experience = db.Experience;
+const Game = db.Game;
+const Lane = db.Lane;
 const { DateTime } = require('luxon');
 
 /**
@@ -18,48 +20,100 @@ const { DateTime } = require('luxon');
  */
 const gameList = async (req) => {
     try {
-        const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0);
-
-        const currentDateTime = DateTime.now();
-        const start_time = currentDateTime.toFormat('yyyy-MM-dd HH:mm:ss');
-        console.log(start_time);
         const bookings = await Booking.findOne({
             attributes: ['id', 'booking_date', 'start_time', 'end_time', 'reservation_id', 'group_size', 'user_id'],
-            include: {
-                model: Bookable,
-                attributes: ['id', 'connected_experience'],
-                include: [
-                    {
-                        model: Experience,
-                        attributes: ['id', 'name'],
-                        include: [
-                            {
-                                model: Game,
-                                attributes: ['id', 'name'],
-                            }
-                        ]
-                    }
-                ]
-            },
-
+            include: [
+                {
+                    model: Bookable,
+                    attributes: ['id', 'connected_experience'],
+                    include: [
+                        {
+                            model: Experience,
+                            attributes: ['id', 'name'],
+                            include: [
+                                {
+                                    model: Game,
+                                    attributes: ['id', 'experience_id', 'name'],
+                                },
+                            ],
+                        }
+                    ]
+                },
+                {
+                    model: User,
+                    attributes: ['id', 'name', 'role_id'],
+                },
+                {
+                    model: Lane,
+                    attributes: ['id', 'name'],
+                    where: {
+                        id: req.lane_id,
+                    },
+                },
+            ],
             where: {
                 location_id: req.location_id,
                 booking_date: {
                     [Op.eq]: literal('DATE(NOW())')
                 },
                 start_time: {
-                    [Op.lte]: start_time
+                    [Op.lte]: literal(`CONVERT_TZ(NOW(), '+00:00', '+05:30')`)
                 },
                 end_time: {
-                    [Op.gte]: start_time
+                    [Op.gte]: literal(`CONVERT_TZ(NOW(), '+00:00', '+05:30')`)
                 }
             },
-
         });
-
-        // console.log(bookings);
-        return bookings;
+        let booking_array = {};
+        if (bookings) {
+            const games_array = [];
+            const lane_array = [];
+            for (const games of bookings.Bookables) {
+                for (const game of games.Experience.Games) {
+                    if (game.id == 3) {
+                        const data = await Game.findAll({ where: { experience_id: 2 } });
+                        const sub_game_array = [];
+                        for (const min_game of data) {
+                            if (min_game.id == 6) {
+                            }
+                            else {
+                                sub_game_array.push({
+                                    experience_id: min_game.experience_id,
+                                    name: min_game.name,
+                                    game_id: min_game.game_id,
+                                });
+                            }
+                        }
+                        games_array.push({
+                            experience_id: game.experience_id,
+                            name: game.name,
+                            game_id: game.game_id,
+                            game_rule: game.game_rule,
+                            sub_game: sub_game_array,
+                        });
+                    } else {
+                        games_array.push({
+                            experience_id: game.experience_id,
+                            name: game.name,
+                            game_id: game.game_id,
+                        });
+                    }
+                }
+            }
+            booking_array = {
+                booking_id: bookings.id,
+                booking_date: bookings.booking_date,
+                start_time: bookings.start_time,
+                end_time: bookings.end_time,
+                reservation_id: bookings.reservation_id,
+                group_size: bookings.group_size,
+                games: games_array,
+                lane: lane_array,
+                user_name: bookings.User.name,
+            };
+        }
+        // console.log(booking_array);
+        return booking_array;
     } catch (error) {
         console.error('Error fetching bookings:', error);
         throw error;
@@ -72,19 +126,23 @@ const gameList = async (req) => {
  */
 const participantsList = async (req) => {
     try {
-
+       
 
         const booking = await Booking.findOne({ where: { id: req.booking_id } });
         var participants_array = await Participants.findAll({
+           
             where: {
                 booking_id: req.booking_id
             },
             include: [
                 {
                     model: CustomerDetails,
+                },  
+                {
+                    model: ParticipantTeams,
                 },
                 {
-                    model: ParticipantTeams
+                    model: Overall,
                 }
             ]
         });
@@ -94,9 +152,12 @@ const participantsList = async (req) => {
                 booking_id: participant.booking_id,
                 user_id: participant.CustomerDetail.user_id,
                 participant_name: participant.CustomerDetail.first_name + ' ' + participant.CustomerDetail.last_name,
-                target_side: participant.ParticipantTeam ? participant.ParticipantTeam.dataValues.target : ""
+                target_side: participant.ParticipantTeam ? participant.ParticipantTeam.dataValues.target : "",
+                throws: participant.Overall ? participant.Overall.nu_of_throws : 0,
+                score: participant.Overall ? participant.Overall.total_score : 0,
             };
         });
+        // console.log(participants_array)
         return participants;
     } catch (error) {
         console.error('Error fetching booking:', error);
@@ -220,21 +281,32 @@ const playing = async (req) => {
             },
         });
         if (stat_calc) {
-            const result = await Overall.update({
-                nu_of_throws: stat_calc.nu_of_throws + 1,
-                total_miss: (req.status == 'miss') ? stat_calc.total_miss + 1 : 0,
-                total_hits: (req.status == 'hit') ? stat_calc.total_hits + 1 : 0,
-                total_score: stat_calc.total_score + score_points,
-            }, {
-                where: {
-                    booking_id: req.booking_id,
-                    participants_id: req.participant_id,
+            console.log(stat_calc.throws);
+            if (stat_calc.throws == 0) {
+                message = "Insufficient Throws!";
+                return {
+                    status: false,
+                    message: message
                 }
-            })
-            message = "Updated Successfully!";
-            return {
-                status: true,
-                message: message
+            }
+            else {
+                const result = await Overall.update({
+                    nu_of_throws: stat_calc.nu_of_throws + 1,
+                    total_miss: (req.status == 'miss') ? stat_calc.total_miss + 1 : 0,
+                    total_hits: (req.status == 'hit') ? stat_calc.total_hits + 1 : 0,
+                    total_score: stat_calc.total_score + score_points,
+                    throws: stat_calc.throws > 0 ? stat_calc.throws - 1 : 0,
+                }, {
+                    where: {
+                        booking_id: req.booking_id,
+                        participants_id: req.participant_id,
+                    }
+                })
+                message = "Updated Successfully!";
+                return {
+                    status: true,
+                    message: message
+                }
             }
         }
         else {
@@ -259,3 +331,6 @@ const playing = async (req) => {
     }
 }
 module.exports = { gameList, participantsList, assignTarget, winnerList, playing }
+
+
+

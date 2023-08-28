@@ -27,8 +27,11 @@ db.Overall = require("../models/Overall")(sequelize, DataTypes);
 db.GameScore = require('../models/GameScore')(sequelize, DataTypes);
 db.BookingBookable = require('../models/BookingBookable')(sequelize, DataTypes);
 db.Experience = require('../models/Experience')(sequelize, DataTypes);
+db.Game = require('../models/Game')(sequelize,DataTypes);
+db.BookingLane = require('../models/BookingLane')(sequelize,DataTypes);
 
 /* Association or Relation between tables  */
+
 const ParticipantsAssociation = require('./association/ParticipantsAssociation');
 ParticipantsAssociation(db);
 

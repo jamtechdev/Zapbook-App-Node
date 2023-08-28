@@ -24,6 +24,10 @@ module.exports = (sequelize, DataTypes) => {
         booking_id: {
             type: DataTypes.INTEGER,
             allowNull: true,
+        },
+        throws: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
         }
     }, {
         tableName: 'overalls',

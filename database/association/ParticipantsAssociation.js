@@ -1,5 +1,5 @@
 module.exports = (db) => {
-    const { User, Participants, CustomerDetails, ParticipantTeams, Overall, Booking, Bookable, Experience } = db;
+    const { User, Participants, CustomerDetails, ParticipantTeams, Overall, Booking, Bookable, Experience, Game, Lane, BookingLane } = db;
 
     /**
      * Relation between Participant with Customer details 
@@ -27,6 +27,9 @@ module.exports = (db) => {
      * End
      */
 
+    /**
+     * Relation between Overall and User 
+     */
     Overall.hasOne(User, {
         foreignKey: 'id',
         sourceKey: 'participants_id'
@@ -36,6 +39,10 @@ module.exports = (db) => {
         targetKey: 'participants_id'
     });
 
+    /**
+     * relation Booking and Bookable
+     * Bookable can be multiple 
+     */
     Booking.belongsToMany(Bookable, {
         through: 'booking_bookable',
         foreignKey: 'booking_id',
@@ -49,14 +56,72 @@ module.exports = (db) => {
         timestamps: false
     });
 
-
+    /** 
+     * relation between Bookable and Experience
+     * 
+     */
     Bookable.hasOne(Experience, {
         foreignKey: 'id'
     });
     Experience.belongsTo(Bookable, {
         foreignKey: 'connected_experience'
+    });
+
+    /** relation between booking and User 
+     * Booking has One user
+    */
+
+    Booking.hasOne(User, {
+        foreignKey: 'id',
+        sourceKey: 'user_id'
+    });
+    User.belongsTo(Booking, {
+        foreignKey: 'id',
+        targetKey: 'user_id'
     })
 
+    /**
+     * relation between Experience with Game 
+     * experience has multiple games.
+     */
+    Experience.hasMany(Game, {
+        foreignKey: 'experience_id'
+    });
+    Game.belongsTo(Experience, { 
+        foreignKey: 'experience_id' 
+    });
+
+    /**
+     * relation between Booking and Lane 
+     * through booking_lane
+     */
+    Booking.belongsToMany(Lane, {
+        through: 'booking_lane',
+        foreignKey: 'booking_id',
+        otherKey: 'lane_id',
+        timestamps: false,
+    });
+
+    Lane.belongsToMany(Booking, {
+        through: 'booking_lane',
+        foreignKey: 'booking_id',
+        otherKey: 'lane_id',
+        timestamps: false,
+    });
+
+    /**
+     * Connect Participants with Overall
+     * 
+     */
+    Participants.hasOne(Overall, {
+        foreignKey: 'participants_id',
+        sourceKey: 'user_id',
+    });
+
+    Overall.belongsTo(Participants, {
+        foreignKey: 'participants_id',
+        targetKey: 'user_id',
+    });
 
 
 };

@@ -160,7 +160,7 @@ INSERT INTO `bookings` (`id`, `location_id`, `reservation_id`, `user_id`, `creat
 (43,	1,	'MILL-27-1931',	432,	NULL,	5,	'2023-09-01',	'2023-09-01 12:00:00',	'2023-09-01 14:00:00',	6.00,	NULL,	0.00,	0.00,	'full',	NULL,	66.00,	66.00,	'sdfsdfsdf',	NULL,	NULL,	NULL,	'invoices/invoice-MILL-27-1931.pdf',	'millvale/waiver/agreement/TUlMTC0yNy0xOTMx',	NULL,	NULL,	NULL,	NULL,	1,	1,	'103.89.61.50',	'Lucknow',	'UP',	'IN',	'',	'2023-08-21 15:21:00',	'2023-08-21 15:21:01'),
 (44,	1,	'MILL-47-3766',	450,	NULL,	4,	'2023-09-07',	'2023-09-07 12:00:00',	'2023-09-07 14:00:00',	17.50,	NULL,	2.00,	115.00,	'full',	NULL,	192.50,	192.50,	'sdvsdv',	NULL,	NULL,	NULL,	'invoices/invoice-MILL-47-3766.pdf',	'millvale/waiver/agreement/TUlMTC00Ny0zNzY2',	NULL,	NULL,	NULL,	NULL,	1,	1,	'103.89.61.50',	'Lucknow',	'UP',	'IN',	'',	'2023-08-22 13:22:07',	'2023-08-22 13:22:08'),
 (45,	1,	'MILL-57-2116',	464,	NULL,	3,	'2023-08-25',	'2023-08-25 12:00:00',	'2023-08-25 14:00:00',	6.00,	NULL,	0.00,	0.00,	'full',	NULL,	66.00,	66.00,	'sdgvsdgvsdgv',	NULL,	NULL,	NULL,	'invoices/invoice-MILL-57-2116.pdf',	'millvale/waiver/agreement/TUlMTC01Ny0yMTE2',	NULL,	NULL,	NULL,	NULL,	1,	1,	'103.89.61.50',	'Lucknow',	'UP',	'IN',	'',	'2023-08-22 13:41:17',	'2023-08-22 13:41:18'),
-(46,	1,	'MILL-24-6559',	465,	NULL,	1,	'2023-08-25',	'2023-08-25 10:00:00',	'2023-08-25 23:00:00',	6.00,	NULL,	0.00,	0.00,	'full',	NULL,	66.00,	66.00,	'vcxvcv',	NULL,	NULL,	NULL,	'invoices/invoice-MILL-24-6559.pdf',	'millvale/waiver/agreement/TUlMTC0yNC02NTU5',	NULL,	NULL,	NULL,	NULL,	1,	1,	'103.89.61.50',	'Lucknow',	'UP',	'IN',	'',	'2023-08-22 13:48:03',	'2023-08-22 13:48:04');
+(46,	1,	'MILL-24-6559',	465,	NULL,	1,	'2023-08-26',	'2023-08-26 10:00:00',	'2023-08-26 23:00:00',	6.00,	NULL,	0.00,	0.00,	'full',	NULL,	66.00,	66.00,	'vcxvcv',	NULL,	NULL,	NULL,	'invoices/invoice-MILL-24-6559.pdf',	'millvale/waiver/agreement/TUlMTC0yNC02NTU5',	NULL,	NULL,	NULL,	NULL,	1,	1,	'103.89.61.50',	'Lucknow',	'UP',	'IN',	'',	'2023-08-22 13:48:03',	'2023-08-22 13:48:04');
 
 DROP TABLE IF EXISTS `booking_bookable`;
 CREATE TABLE `booking_bookable` (
@@ -1713,4 +1713,4 @@ INSERT INTO `waitlists` (`id`, `location_id`, `experience_id`, `first_name`, `la
 (17,	1,	1,	'Alex',	'Rollence',	'MILL-17-6306',	'Alex@gmail.com',	'8547856985',	12,	'no',	NULL,	'waiting',	'2023-08-18 12:44:01',	'2023-08-18 12:44:01'),
 (18,	1,	1,	'Plex',	'Rollence',	'MILL-18-4361',	'Plex@gmail.com',	'8547856985',	12,	'no',	NULL,	'archived',	'2023-08-18 12:44:17',	'2023-08-21 05:19:19');
 
--- 2023-08-26 07:17:50
+-- 2023-08-26 13:25:25
