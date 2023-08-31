@@ -16,6 +16,12 @@ module.exports = (sequelize, Datatypes) => {
             type: Datatypes.INTEGER,
             allowNull: true,
         },
+        game_id: {
+            type: Datatypes.VIRTUAL,
+            get() {
+                return `${this.id}`;
+            },
+        }
 
     }, {
         tableName: 'games',

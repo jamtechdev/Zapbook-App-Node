@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true,
         },
+        status:{
+            type:DataTypes.INTEGER,
+            allowNull:true,
+        }
 
     }, {
         tableName: 'participant_teams',

@@ -37,7 +37,13 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: true
         },
         status: {
-            type: DataTypes.DATE,
+            
+            type: DataTypes.ENUM,
+            values:['participant','spectator'],
+            allowNull: true
+        },
+        playing_order: {
+            type: DataTypes.INTEGER,
             allowNull: true
         },
     }, {

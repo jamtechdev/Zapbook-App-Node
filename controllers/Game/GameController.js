@@ -12,7 +12,12 @@ const ParticipantTeams = db.ParticipantTeams;
 const Experience = db.Experience;
 const Game = db.Game;
 const Lane = db.Lane;
+const PageLog = db.PageLog;
+const BookingLane = db.BookingLane;
 const { DateTime } = require('luxon');
+var moment = require('moment-timezone');
+
+
 
 /**
  * This will return the game list
@@ -22,6 +27,7 @@ const gameList = async (req) => {
     try {
         const bookings = await Booking.findOne({
             attributes: ['id', 'booking_date', 'start_time', 'end_time', 'reservation_id', 'group_size', 'user_id'],
+
             include: [
                 {
                     model: Bookable,
@@ -50,6 +56,9 @@ const gameList = async (req) => {
                         id: req.lane_id,
                     },
                 },
+                {
+                    model: PageLog
+                }
             ],
             where: {
                 location_id: req.location_id,
@@ -100,6 +109,7 @@ const gameList = async (req) => {
                     }
                 }
             }
+
             booking_array = {
                 booking_id: bookings.id,
                 booking_date: bookings.booking_date,
@@ -110,6 +120,7 @@ const gameList = async (req) => {
                 games: games_array,
                 lane: lane_array,
                 user_name: bookings.User.name,
+                pageLog: bookings.PageLog,
             };
         }
         // console.log(booking_array);
@@ -126,18 +137,19 @@ const gameList = async (req) => {
  */
 const participantsList = async (req) => {
     try {
-       
+
 
         const booking = await Booking.findOne({ where: { id: req.booking_id } });
         var participants_array = await Participants.findAll({
-           
+
             where: {
-                booking_id: req.booking_id
+                booking_id: req.booking_id,
+                status: 'participant'
             },
             include: [
                 {
                     model: CustomerDetails,
-                },  
+                },
                 {
                     model: ParticipantTeams,
                 },
@@ -152,8 +164,10 @@ const participantsList = async (req) => {
                 booking_id: participant.booking_id,
                 user_id: participant.CustomerDetail.user_id,
                 participant_name: participant.CustomerDetail.first_name + ' ' + participant.CustomerDetail.last_name,
+                first_name: participant.CustomerDetail.first_name,
+                last_name: participant.CustomerDetail.last_name,
                 target_side: participant.ParticipantTeam ? participant.ParticipantTeam.dataValues.target : "",
-                throws: participant.Overall ? participant.Overall.nu_of_throws : 0,
+                throws: participant.Overall ? participant.Overall.throws - participant.Overall.nu_of_throws : 12,
                 score: participant.Overall ? participant.Overall.total_score : 0,
             };
         });
@@ -282,7 +296,7 @@ const playing = async (req) => {
         });
         if (stat_calc) {
             console.log(stat_calc.throws);
-            if (stat_calc.throws == 0) {
+            if (stat_calc.throws == stat_calc.nu_of_throws) {
                 message = "Insufficient Throws!";
                 return {
                     status: false,
@@ -294,8 +308,7 @@ const playing = async (req) => {
                     nu_of_throws: stat_calc.nu_of_throws + 1,
                     total_miss: (req.status == 'miss') ? stat_calc.total_miss + 1 : 0,
                     total_hits: (req.status == 'hit') ? stat_calc.total_hits + 1 : 0,
-                    total_score: stat_calc.total_score + score_points,
-                    throws: stat_calc.throws > 0 ? stat_calc.throws - 1 : 0,
+                    total_score: stat_calc.total_score + score_points
                 }, {
                     where: {
                         booking_id: req.booking_id,
@@ -330,7 +343,501 @@ const playing = async (req) => {
         throw error;
     }
 }
-module.exports = { gameList, participantsList, assignTarget, winnerList, playing }
+/**
+ * 
+ * @param {location_id,lane_id,page,reservation_id} req 
+ * @returns 
+ */
+const pageLog = async (req) => {
+    var message = "";
+    const records = await PageLog.findOne({
+        where: {
+            lane_id: req.lane_id,
+            reservation_id: req.reservation_id
+        },
+    });
+    if (records) {
+        const pageLog = await PageLog.update(req, {
+            where: {
+                lane_id: req.lane_id,
+                reservation_id: req.reservation_id
+            }
+        }
+        );
+        message = "Logs saved successfully";
+        return {
+            status: true,
+            message: message
+        }
+    }
+    else {
+        const pagelog = await PageLog.create(req);
+        message = "Unable to save log!";
+        return {
+            status: true,
+            message: message
+        }
+    }
+
+}
+
+/**
+ * This socket is used to update the game start time in booking_lane table
+ * @param {boooking_id,lane_id,timezone} req 
+ * @returns 
+ */
+const gameStarted = async (req) => {
+    try {
+        const booking = await Booking.findOne({
+            where: {
+                id: req.booking_id,
+            }
+        })
+
+        const bookingLane = await BookingLane.findOne({
+            where: {
+                booking_id: req.booking_id,
+                lane_id: req.lane_id
+            }
+        })
+
+        const date_time = moment().tz(req.timezone).format('YYYY-MM-DD HH:mm:ss');
+
+        if (bookingLane && !bookingLane.game_started) {
+
+            const result = await BookingLane.update({
+                game_started: date_time,
+                lane_id: req.lane_id,
+                booking_id: req.booking_id
+            }, {
+                where: {
+                    lane_id: req.lane_id,
+                    booking_id: req.booking_id,
+                }
+            });
+        }
+
+        const endTimestamp = moment(booking.end_time).unix();
+        const duration = endTimestamp - moment(date_time).unix();
+
+        return { duration: duration };
+
+    } catch (error) {
+        console.error('Error in updating game started:', error);
+        throw error;
+    }
+}
+
+/**
+ * This socket is used to update the booking end time 
+ * @param {*} req 
+ * @returns 
+ */
+const updateGameTime = async (req) => {
+    try {
+
+        const booking = await Booking.findOne({
+            where: {
+                id: req.booking_id,
+            }
+        })
+        const new_end_time = moment(booking.end_time).add(req.minutes, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+
+        const result = await Booking.update({
+            end_time: new_end_time
+        }, {
+            where: {
+                id: req.booking_id,
+            }
+        });
+
+        const endTimestamp = moment(new_end_time).unix();
+        const duration = endTimestamp - moment(moment().tz(req.timezone).format('YYYY-MM-DD HH:mm:ss')).unix();
+
+        return { duration: duration };
+
+    } catch (error) {
+        console.error('Error in updating game started:', error);
+        throw error;
+    }
+}
+
+/**
+ * This socket is used to undo the last throws
+ * @param {participant_id,booking_id} req 
+ * @returns 
+ */
+const undoThrows = async (req) => {
+    try {
+        if (req.status == 'undo') {
+            const participantStats = await ParticipantStat.findOne({
+                where: {
+                    participants_id: req.participant_id,
+                    booking_id: req.booking_id,
+                },
+                order: [
+                    ['id', 'DESC'],
+                ],
+            });
+
+            const overall_data = await Overall.findOne({
+                where: {
+                    participants_id: req.participant_id,
+                    booking_id: req.booking_id,
+                },
+
+            });
+
+            const result = await Overall.update({
+                nu_of_throws: overall_data.nu_of_throws > 0 ? overall_data.nu_of_throws - 1 : 0,
+                total_miss: (participantStats.status == 'miss' && overall_data.total_miss != 0) ? overall_data.total_miss - 1 : 0,
+                total_hits: (participantStats.status == 'hit' && overall_data.total_hits != 0) ? overall_data.total_hits - 1 : 0,
+                total_score: overall_data.nu_of_throws > 0 ? overall_data.total_score - participantStats.score : 0,
+            }, {
+                where: {
+                    booking_id: req.booking_id,
+                    participants_id: req.participant_id,
+                }
+            })
+            if (result) {
+                await ParticipantStat.destroy({ where: { id: participantStats.id } });
+                message = "Updated Successfully!";
+                return {
+                    status: true,
+                    message: message
+                }
+            }
+            else {
+                message = "Unable to Updated!";
+                return {
+                    status: false,
+                    message: message
+                }
+            }
+
+        }
+    } catch (error) {
+        console.error('Error in saving game data:', error);
+        throw error;
+    }
+}
+
+/**
+ * calculat the time difference
+ * @param {*} startTime 
+ * @param {*} endTime 
+ * @returns 
+ */
+const getTimeDifference = (startTime, endTime) => {
+    const diffInMillis = endTime.getTime() - startTime.getTime();
+    const minutes = diffInMillis / (1000 * 60);
+    return minutes;
+};
+
+/** 
+ * This socket will provide the time difference between current booking and next available booking.
+*/
+const availableTime = async (req) => {
+    try {
+        const current_booking = await Booking.findOne({
+            include: [
+                {
+                    model: Lane,
+                    attributes: ['id', 'name'],
+                    where: {
+                        id: req.lane_id,
+                    },
+                },
+            ],
+            where: {
+                location_id: req.location_id,
+                booking_date: {
+                    [Op.eq]: literal('DATE(NOW())')
+                },
+                start_time: {
+                    [Op.lte]: literal(`CONVERT_TZ(NOW(), '+00:00', '+05:30')`)
+                },
+                end_time: {
+                    [Op.gte]: literal(`CONVERT_TZ(NOW(), '+00:00', '+05:30')`)
+                }
+            },
+        });
+        const available_booking = await Booking.findOne({
+            include: [
+                {
+                    model: Lane,
+                    attributes: ['id', 'name'],
+                    where: {
+                        id: req.lane_id,
+                    },
+                },
+            ],
+            where: {
+                booking_date: {
+                    [Op.eq]: literal('DATE(NOW())')
+                },
+                start_time: {
+                    [Op.gte]: literal(`CONVERT_TZ(NOW(), '+00:00', '+05:30')`)
+                },
+            },
+            order: [['start_time', 'ASC']],
+            limit: 1
+        });
+        if (current_booking && available_booking) {
+            let timeDifference = null;
+            const firstBookingEndTime = current_booking.end_time;
+            const secondBookingStartTime = available_booking.start_time;
+            timeDifference = getTimeDifference(firstBookingEndTime, secondBookingStartTime);
+            var count = timeDifference / 30;
+            const available_time = [];
+            for (let i = 1; i <= count; i++) {
+                available_time.push(30 * i);
+            }
+            return {
+                available_time
+            };
+        }
+        else {
+            return {
+                status: false,
+                message: 'No Current booking or available booking find.'
+            }
+        }
+    } catch (error) {
+        console.error('Error in fetching current booking details:', error);
+        throw error;
+    }
+}
+/**
+ * This socket is used to set the status of the particpants
+ * @param {booking_id,participant_id} req 
+ * @returns 
+ */
+
+const updatePartcipantStatus = async (req) => {
+    try {
+        const target = await ParticipantTeams.findOne({
+            where: {
+                booking_id: req.booking_id,
+                participant_id: req.participant_id,
+            }
+        });
+
+        if (target.target == 'right') {
+            await ParticipantTeams.update({
+                status: 0,
+            }, {
+                where: {
+                    booking_id: req.booking_id,
+
+                    target: 'right'
+                }
+            })
+            const result = await ParticipantTeams.update({
+                status: 1,
+            }, {
+                where: {
+                    booking_id: req.booking_id,
+                    participant_id: req.participant_id,
+
+                }
+            });
+            if (result) {
+                return {
+                    status: true,
+                    message: 'Participant Status updated successfully!.'
+                }
+            }
+            else {
+                return {
+                    status: false,
+                    message: 'Unable to update participant status.'
+                }
+            }
+        }
+        else {
+            await ParticipantTeams.update({
+                status: 0,
+            }, {
+                where: {
+                    booking_id: req.booking_id,
+
+                    target: 'left'
+                }
+            })
+            const result = await ParticipantTeams.update({
+                status: 1,
+            }, {
+                where: {
+                    booking_id: req.booking_id,
+                    participant_id: req.participant_id,
+
+                }
+            });
+            if (result) {
+                return {
+                    status: true,
+                    message: 'Participant Status updated successfully!.'
+                }
+            }
+            else {
+                return {
+                    status: false,
+                    message: 'Unable to update participant status.'
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error in updating participants status:', error);
+        throw error;
+    }
+}
+/**
+ * This socket code will be used to get the top 4 participant, selected participants and their stats
+ * @param {booking_id} req 
+ * @returns 
+ */
+const selectedParticipants = async (req) => {
+    try {
+        const topFourParticipant = await Overall.findAll({
+            attributes: ['id', 'participants_id', 'total_score', 'throws'],
+            where: {
+                booking_id: req.booking_id
+            },
+            include: {
+                model: User,
+                attributes: ['name'],
+            },
+            order: [['total_score', 'DESC']],
+            limit: 4,
+        });
+
+        const selectedParticipants = await ParticipantTeams.findAll({
+
+            where: {
+                booking_id: req.booking_id,
+                status: 1
+            },
+
+            include: [{
+                model: ParticipantStat,
+                attributes: ['score'],
+            }]
+
+        });
+
+        return {
+            topFourParticipant,
+            selectedParticipants
+        };
+    } catch (error) {
+        console.error('Error in fetching particpant scroe or selected participants:', error);
+        throw error;
+    }
+}
+
+const updateParticipantDetails = async (req) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const data = req;
+
+        for (let i = 0; i < data.length; i++) {
+            // Update user's username
+            const user = await User.findOne({
+                where: {
+                    id: data[i].user_id,
+
+                },
+
+            }, {
+                transaction
+            });
+            if (!user) {
+                return {
+                    status: false,
+                    message: "User Id not Foud"
+                }
+            }
+            else {
+                user.name = data[i].name;
+                await user.save({ transaction });
+            }
+
+            // Update name in customer details table
+            const customer = await CustomerDetails.findOne({
+                where: {
+                    user_id: data[i].user_id,
+
+                },
+
+            }, {
+                transaction
+            });
+
+            if (!customer) {
+                return {
+                    status: false,
+                    message: "User Id not Foud"
+                }
+            }
+            else {
+                customer.first_name = data[i].name;
+                customer.last_name = data[i].name;
+                await customer.save({ transaction });
+            }
+
+            //Update other details in participants table
+            const participants = await Participants.findOne({
+                where: {
+                    user_id: data[i].user_id,
+                    booking_id: data[i].booking_id,
+                },
+
+            }, {
+                transaction
+            });
+            if (!participants) {
+                return {
+                    status: false,
+                    message: "User Id not Foud"
+                }
+            }
+            else {
+                participants.playing_order = data[i].playing_order;
+                participants.status = data[i].status;
+                await participants.save({ transaction });
+            }
+        }
+        await transaction.commit();
+        return {
+            status: true,
+            message: "Details Updated successfully!"
+        }
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error in updating participants details:', error);
+        throw error;
+    }
+}
+
+
+
+module.exports = {
+    gameList,
+    participantsList,
+    assignTarget,
+    winnerList,
+    playing,
+    pageLog,
+    gameStarted,
+    updateGameTime,
+    undoThrows,
+    availableTime,
+    updatePartcipantStatus,
+    selectedParticipants,
+    updateParticipantDetails,
+
+}
 
 
 

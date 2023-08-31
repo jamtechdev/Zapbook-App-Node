@@ -4,3 +4,34 @@ Date(28-01-2023)
 >> Update the Participant List api 
     >> Created Association between Participants and Overall tableName
     >> added New keys of score and number of throws in the particpants List.
+
+
+Date(29-01-2023)
+>> Created a New socket PageLog
+    >> created Model and migration and Node Model.
+    >> if record found then update and if not then create 
+>> Add new column in the BookingLane Model "game_started"
+    >> Created a new socket for update game start time.
+>> Created a new socket UpdateGameTime
+    >> Booking end_time increase with given time in minutes.
+>> Created the new socket which will undo the last throws of the participants
+
+Date(30-08-2023)
+>>Created A new Socket which will provide the time difference 
+    b/w current booking and new booking
+>> Created a new association between booking and PageLog
+>> Created a new socket for request assistance
+
+
+
+
+Date(31-08-2023)
+>> Created a new socket which will used to Update the participants as active.
+    >> Update the Node model,laravel model and migration, for Status column
+>> Created a new socket which will provide-:
+    >> Top 4 participants according to score.
+    >> 2 Active participants with their last 5 throws score
+    >> Created a new relation between PartcipantTeam with ParticipantStat to fetch the 
+        last 5 throws records.
+>>  Created a new socket which will update the Details in -:
+    >> User table, Customer details table, and Participants table.

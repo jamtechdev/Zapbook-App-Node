@@ -1,5 +1,7 @@
+const { ParticipantStat } = require("../database");
+
 module.exports = (db) => {
-    const { User, Participants, CustomerDetails, ParticipantTeams, Overall, Booking, Bookable, Experience, Game, Lane, BookingLane } = db;
+    const { User, Participants, CustomerDetails, ParticipantTeams, Overall, Booking, Bookable, Experience, Game, Lane, BookingLane, PageLog,ParticipantStat } = db;
 
     /**
      * Relation between Participant with Customer details 
@@ -87,8 +89,8 @@ module.exports = (db) => {
     Experience.hasMany(Game, {
         foreignKey: 'experience_id'
     });
-    Game.belongsTo(Experience, { 
-        foreignKey: 'experience_id' 
+    Game.belongsTo(Experience, {
+        foreignKey: 'experience_id'
     });
 
     /**
@@ -122,6 +124,26 @@ module.exports = (db) => {
         foreignKey: 'participants_id',
         targetKey: 'user_id',
     });
+    /**
+     * Relation between Booking and pageLogs
+     */
+    Booking.hasOne(PageLog, {
+        foreignKey: 'reservation_id',
+        sourceKey: 'reservation_id',
+    });
 
+    PageLog.belongsTo(Booking, {
+        foreignKey: 'reservation_id',
+        sourceKey: 'reservation_id',
+    });
+
+    ParticipantTeams.hasMany(ParticipantStat, {
+        foreignKey: 'participants_id',
+        sourceKey:'participant_id'
+    });
+    ParticipantStat.belongsTo(ParticipantTeams, {
+        foreignKey: 'participants_id',
+        targetKey:'participant_id'
+    });
 
 };

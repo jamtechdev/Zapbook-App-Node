@@ -1,5 +1,5 @@
 module.exports = (sequalize, DataTypes) => {
-    const ParticipantStat = sequalize.define("", {
+    const ParticipantStat = sequalize.define("ParticipantStat", {
         booking_id: {
             type: DataTypes.INTEGER,
             allowNull: true,

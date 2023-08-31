@@ -29,6 +29,7 @@ db.BookingBookable = require('../models/BookingBookable')(sequelize, DataTypes);
 db.Experience = require('../models/Experience')(sequelize, DataTypes);
 db.Game = require('../models/Game')(sequelize,DataTypes);
 db.BookingLane = require('../models/BookingLane')(sequelize,DataTypes);
+db.PageLog = require('../models/PageLog')(sequelize,DataTypes);
 
 /* Association or Relation between tables  */
 
