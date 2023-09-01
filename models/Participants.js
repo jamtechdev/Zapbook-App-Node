@@ -2,7 +2,7 @@ module.exports = (sequelize, DataTypes) => {
     const Participants = sequelize.define("Participants", {
         booking_id: {
             type: DataTypes.INTEGER,
-            allowNull:true
+            allowNull: true
         },
         location_id: {
             type: DataTypes.INTEGER,
@@ -37,14 +37,41 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: true
         },
         status: {
-            
             type: DataTypes.ENUM,
-            values:['participant','spectator'],
+            values: ['participant', 'spectator'],
             allowNull: true
         },
         playing_order: {
             type: DataTypes.INTEGER,
             allowNull: true
+        },
+        throws: {
+            type: DataTypes.VIRTUAL,
+            async get() {
+                const [result] = await sequelize.query(`
+                    SELECT nu_of_throws
+                    FROM overalls
+                    WHERE booking_id = '${this.booking_id}' AND participants_id = '${this.user_id}'
+                `, { type: sequelize.QueryTypes.SELECT });
+                if (result) {
+                    return result;
+                }
+                return 12;
+            },
+        },
+        scores: {
+            type: DataTypes.VIRTUAL,
+            async get() {
+                const [result] = await sequelize.query(`
+                    SELECT total_score
+                    FROM overalls
+                    WHERE booking_id = '${this.booking_id}' AND participants_id = '${this.user_id}'
+                `, { type: sequelize.QueryTypes.SELECT });
+                if (result) {
+                    return result ? result : 0;
+                }
+
+            },
         },
     }, {
         tableName: 'participants',
@@ -53,13 +80,5 @@ module.exports = (sequelize, DataTypes) => {
         updatedAt: 'updated_at',
     }
     );
-
-    Participants.associate = (models) => {
-        Participants.hasOne(models.CustomerDetails, {
-            foreignKey: 'user_id',
-            sourceKey: 'user_id' // Explicitly specify the source key
-        });
-    };
-
     return Participants;
 }

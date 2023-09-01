@@ -35,3 +35,13 @@ Date(31-08-2023)
         last 5 throws records.
 >>  Created a new socket which will update the Details in -:
     >> User table, Customer details table, and Participants table.
+
+
+Date(01-09-2023)
+>> Started doing changes On the available time between booking socket.
+    >> available booking should be greater than equal to current booking end_time( implement)
+    >> Created new model for location_business_hours
+    >> if current booking is last then match with location business hours end time 
+        and return the time differnece in 30 minutes solts.
+>> Change the Response of Top 4 and Active particpants list 
+>> Fix the Participants List api and create two accessor for throws and and total scores

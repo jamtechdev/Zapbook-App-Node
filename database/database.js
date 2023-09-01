@@ -30,6 +30,7 @@ db.Experience = require('../models/Experience')(sequelize, DataTypes);
 db.Game = require('../models/Game')(sequelize,DataTypes);
 db.BookingLane = require('../models/BookingLane')(sequelize,DataTypes);
 db.PageLog = require('../models/PageLog')(sequelize,DataTypes);
+db.LocationBusinessHours = require('../models/LocationBusinessHours')(sequelize,DataTypes);
 
 /* Association or Relation between tables  */
 

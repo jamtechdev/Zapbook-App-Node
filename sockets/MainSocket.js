@@ -248,8 +248,9 @@ function initializeSocket(server) {
        */
         socket.on('available_time', async (request) => {
             try {
-                const available_time = await gameController.availableTime(request);
-                io.emit(`availableTime`, available_time);
+              
+                const avail_time = await gameController.availableTime(request);
+                io.emit(`availableTime`, avail_time);
             } catch (error) {
                 console.error("Error in storing the game data:", error)
             }

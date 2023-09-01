@@ -1,5 +1,3 @@
-const { ParticipantStat } = require("../database");
-
 module.exports = (db) => {
     const { User, Participants, CustomerDetails, ParticipantTeams, Overall, Booking, Bookable, Experience, Game, Lane, BookingLane, PageLog,ParticipantStat } = db;
 
@@ -145,5 +143,9 @@ module.exports = (db) => {
         foreignKey: 'participants_id',
         targetKey:'participant_id'
     });
+
+
+
+    
 
 };

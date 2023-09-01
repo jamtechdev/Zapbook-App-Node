@@ -14,11 +14,9 @@ const Game = db.Game;
 const Lane = db.Lane;
 const PageLog = db.PageLog;
 const BookingLane = db.BookingLane;
+const LocationBusinessHours = db.LocationBusinessHours;
 const { DateTime } = require('luxon');
 var moment = require('moment-timezone');
-
-
-
 /**
  * This will return the game list
  * @param {booking_id, location_id, lane_id} req 
@@ -27,7 +25,6 @@ const gameList = async (req) => {
     try {
         const bookings = await Booking.findOne({
             attributes: ['id', 'booking_date', 'start_time', 'end_time', 'reservation_id', 'group_size', 'user_id'],
-
             include: [
                 {
                     model: Bookable,
@@ -109,7 +106,6 @@ const gameList = async (req) => {
                     }
                 }
             }
-
             booking_array = {
                 booking_id: bookings.id,
                 booking_date: bookings.booking_date,
@@ -137,11 +133,8 @@ const gameList = async (req) => {
  */
 const participantsList = async (req) => {
     try {
-
-
         const booking = await Booking.findOne({ where: { id: req.booking_id } });
         var participants_array = await Participants.findAll({
-
             where: {
                 booking_id: req.booking_id,
                 status: 'participant'
@@ -152,26 +145,29 @@ const participantsList = async (req) => {
                 },
                 {
                     model: ParticipantTeams,
+                    where: {
+                        booking_id: req.booking_id,
+                    }
                 },
-                {
-                    model: Overall,
-                }
+              
             ]
         });
-        const participants = participants_array.map(participant => {
+        const participants = await Promise.all(participants_array.map(async (participant) => {
+            const throws = await participant.get('throws');
+            const scores = await participant.get('scores');
             return {
-                reservation_id: booking.reservation_id,
+                  reservation_id: booking.reservation_id,
                 booking_id: participant.booking_id,
                 user_id: participant.CustomerDetail.user_id,
                 participant_name: participant.CustomerDetail.first_name + ' ' + participant.CustomerDetail.last_name,
                 first_name: participant.CustomerDetail.first_name,
                 last_name: participant.CustomerDetail.last_name,
                 target_side: participant.ParticipantTeam ? participant.ParticipantTeam.dataValues.target : "",
-                throws: participant.Overall ? participant.Overall.throws - participant.Overall.nu_of_throws : 12,
-                score: participant.Overall ? participant.Overall.total_score : 0,
+                throws:throws.nu_of_throws,
+                scores:scores?.total_score ?? 0,
+                
             };
-        });
-        // console.log(participants_array)
+        }));
         return participants;
     } catch (error) {
         console.error('Error fetching booking:', error);
@@ -378,9 +374,7 @@ const pageLog = async (req) => {
             message: message
         }
     }
-
 }
-
 /**
  * This socket is used to update the game start time in booking_lane table
  * @param {boooking_id,lane_id,timezone} req 
@@ -393,18 +387,14 @@ const gameStarted = async (req) => {
                 id: req.booking_id,
             }
         })
-
         const bookingLane = await BookingLane.findOne({
             where: {
                 booking_id: req.booking_id,
                 lane_id: req.lane_id
             }
         })
-
         const date_time = moment().tz(req.timezone).format('YYYY-MM-DD HH:mm:ss');
-
         if (bookingLane && !bookingLane.game_started) {
-
             const result = await BookingLane.update({
                 game_started: date_time,
                 lane_id: req.lane_id,
@@ -416,18 +406,14 @@ const gameStarted = async (req) => {
                 }
             });
         }
-
         const endTimestamp = moment(booking.end_time).unix();
         const duration = endTimestamp - moment(date_time).unix();
-
         return { duration: duration };
-
     } catch (error) {
         console.error('Error in updating game started:', error);
         throw error;
     }
 }
-
 /**
  * This socket is used to update the booking end time 
  * @param {*} req 
@@ -435,14 +421,12 @@ const gameStarted = async (req) => {
  */
 const updateGameTime = async (req) => {
     try {
-
         const booking = await Booking.findOne({
             where: {
                 id: req.booking_id,
             }
         })
         const new_end_time = moment(booking.end_time).add(req.minutes, 'minutes').format('YYYY-MM-DD HH:mm:ss');
-
         const result = await Booking.update({
             end_time: new_end_time
         }, {
@@ -450,18 +434,14 @@ const updateGameTime = async (req) => {
                 id: req.booking_id,
             }
         });
-
         const endTimestamp = moment(new_end_time).unix();
         const duration = endTimestamp - moment(moment().tz(req.timezone).format('YYYY-MM-DD HH:mm:ss')).unix();
-
         return { duration: duration };
-
     } catch (error) {
         console.error('Error in updating game started:', error);
         throw error;
     }
 }
-
 /**
  * This socket is used to undo the last throws
  * @param {participant_id,booking_id} req 
@@ -479,15 +459,12 @@ const undoThrows = async (req) => {
                     ['id', 'DESC'],
                 ],
             });
-
             const overall_data = await Overall.findOne({
                 where: {
                     participants_id: req.participant_id,
                     booking_id: req.booking_id,
                 },
-
             });
-
             const result = await Overall.update({
                 nu_of_throws: overall_data.nu_of_throws > 0 ? overall_data.nu_of_throws - 1 : 0,
                 total_miss: (participantStats.status == 'miss' && overall_data.total_miss != 0) ? overall_data.total_miss - 1 : 0,
@@ -514,14 +491,12 @@ const undoThrows = async (req) => {
                     message: message
                 }
             }
-
         }
     } catch (error) {
         console.error('Error in saving game data:', error);
         throw error;
     }
 }
-
 /**
  * calculat the time difference
  * @param {*} startTime 
@@ -533,7 +508,6 @@ const getTimeDifference = (startTime, endTime) => {
     const minutes = diffInMillis / (1000 * 60);
     return minutes;
 };
-
 /** 
  * This socket will provide the time difference between current booking and next available booking.
 */
@@ -545,12 +519,13 @@ const availableTime = async (req) => {
                     model: Lane,
                     attributes: ['id', 'name'],
                     where: {
-                        id: req.lane_id,
+                        id: req.laneId,
                     },
                 },
             ],
             where: {
                 location_id: req.location_id,
+                id: req.booking_id,
                 booking_date: {
                     [Op.eq]: literal('DATE(NOW())')
                 },
@@ -562,45 +537,90 @@ const availableTime = async (req) => {
                 }
             },
         });
-        const available_booking = await Booking.findOne({
-            include: [
-                {
-                    model: Lane,
-                    attributes: ['id', 'name'],
-                    where: {
-                        id: req.lane_id,
+        // return current_booking;
+        if (current_booking) {
+            const available_booking = await Booking.findOne({
+                include: [
+                    {
+                        model: Lane,
+                        attributes: ['id', 'name'],
+                        where: {
+                            id: req.laneId,
+                        },
+                    },
+                ],
+                where: {
+                    booking_date: {
+                        [Op.eq]: literal('DATE(NOW())')
+                    },
+                    start_time: {
+                        [Op.gte]: current_booking.end_time
                     },
                 },
-            ],
-            where: {
-                booking_date: {
-                    [Op.eq]: literal('DATE(NOW())')
-                },
-                start_time: {
-                    [Op.gte]: literal(`CONVERT_TZ(NOW(), '+00:00', '+05:30')`)
-                },
-            },
-            order: [['start_time', 'ASC']],
-            limit: 1
-        });
-        if (current_booking && available_booking) {
-            let timeDifference = null;
-            const firstBookingEndTime = current_booking.end_time;
-            const secondBookingStartTime = available_booking.start_time;
-            timeDifference = getTimeDifference(firstBookingEndTime, secondBookingStartTime);
-            var count = timeDifference / 30;
-            const available_time = [];
-            for (let i = 1; i <= count; i++) {
-                available_time.push(30 * i);
+                order: [['start_time', 'ASC']],
+                limit: 1
+            });
+            if (current_booking && available_booking) {
+                let timeDifference = null;
+                const firstBookingEndTime = current_booking.end_time;
+                const secondBookingStartTime = available_booking.start_time;
+                timeDifference = getTimeDifference(firstBookingEndTime, secondBookingStartTime);
+                var count = timeDifference / 30;
+                const available_time = [];
+                for (let i = 1; i <= count; i++) {
+                    available_time.push(30 * i);
+                }
+                return {
+                    available_time
+                };
             }
-            return {
-                available_time
-            };
-        }
-        else {
-            return {
-                status: false,
-                message: 'No Current booking or available booking find.'
+            else {
+                // console.log(current_booking.end_time)
+                const today = new Date();
+                const options = { weekday: 'long' };
+                const dayName = new Intl.DateTimeFormat('en-US', options).format(today);
+                const business_hours = await LocationBusinessHours.findOne({
+                    where: {
+                        location_id: 1,
+                        day: dayName.toLowerCase(),
+                    }
+                });
+                const business_hours_end = business_hours.end_time.split('T')[1];
+                const end_time_current = current_booking.end_time
+                const date = new Date(end_time_current);
+                // Get hours, minutes, and seconds
+                const hours = String(end_time_current.getUTCHours()).padStart(2, "0");
+                const minutes = String(end_time_current.getUTCMinutes()).padStart(2, "0");
+                const seconds = String(end_time_current.getUTCSeconds()).padStart(2, "0");
+                const current_booking_end_time = `${hours}:${minutes}`;
+                const business_hours_end_time = business_hours_end
+                const currentTimeParts = current_booking_end_time.split(":");
+                const currentBookingEndTime = new Date();
+                currentBookingEndTime.setHours(parseInt(currentTimeParts[0]), parseInt(currentTimeParts[1]));
+                const businessTimeParts = business_hours_end_time.split(":");
+                const businessHoursEndTime = new Date();
+                businessHoursEndTime.setHours(parseInt(businessTimeParts[0]), parseInt(businessTimeParts[1]));
+                const timeDifferenceMilliseconds = businessHoursEndTime - currentBookingEndTime;
+                const timeDifferenceMinutes = Math.floor(timeDifferenceMilliseconds / 60000); // 60000 milliseconds in a minute
+                var count = timeDifferenceMinutes / 30;
+                const available_time = [];
+                for (let i = 1; i <= count; i++) {
+                    available_time.push(30 * i);
+                }
+                return {
+                    available_time
+                };
+                // let timeDifference = null;
+                // timeDifference = getTimeDifference(business_hours_end_time,end_time_booking);
+                // var count = timeDifference / 30;
+                // console.log(count);
+                // const available_time = [];
+                // for (let i = 1; i <= count; i++) {
+                //     available_time.push(30 * i);
+                // }
+                // return {
+                //     available_time
+                // };
             }
         }
     } catch (error) {
@@ -613,7 +633,6 @@ const availableTime = async (req) => {
  * @param {booking_id,participant_id} req 
  * @returns 
  */
-
 const updatePartcipantStatus = async (req) => {
     try {
         const target = await ParticipantTeams.findOne({
@@ -622,14 +641,12 @@ const updatePartcipantStatus = async (req) => {
                 participant_id: req.participant_id,
             }
         });
-
         if (target.target == 'right') {
             await ParticipantTeams.update({
                 status: 0,
             }, {
                 where: {
                     booking_id: req.booking_id,
-
                     target: 'right'
                 }
             })
@@ -639,7 +656,6 @@ const updatePartcipantStatus = async (req) => {
                 where: {
                     booking_id: req.booking_id,
                     participant_id: req.participant_id,
-
                 }
             });
             if (result) {
@@ -661,7 +677,6 @@ const updatePartcipantStatus = async (req) => {
             }, {
                 where: {
                     booking_id: req.booking_id,
-
                     target: 'left'
                 }
             })
@@ -671,7 +686,6 @@ const updatePartcipantStatus = async (req) => {
                 where: {
                     booking_id: req.booking_id,
                     participant_id: req.participant_id,
-
                 }
             });
             if (result) {
@@ -700,55 +714,122 @@ const updatePartcipantStatus = async (req) => {
 const selectedParticipants = async (req) => {
     try {
         const topFourParticipant = await Overall.findAll({
-            attributes: ['id', 'participants_id', 'total_score', 'throws'],
+            attributes: ['id', 'participants_id', 'total_score', 'throws', 'nu_of_throws'],
             where: {
                 booking_id: req.booking_id
             },
-            include: {
-                model: User,
-                attributes: ['name'],
-            },
+            include: [
+                {
+                    model: User,
+                    attributes: ['name'],
+                },
+            ],
             order: [['total_score', 'DESC']],
             limit: 4,
         });
-
-        const selectedParticipants = await ParticipantTeams.findAll({
-
+        const topScorer = [];
+        const activePlayers = [];
+        topFourParticipant.map((participants, index) => {
+            topScorer.push({
+                id: participants.id,
+                points: participants.total_score,
+                throws: participants.throws - participants.nu_of_throws,
+                name: participants.User.name
+            });
+        });
+        const active_players = await ParticipantTeams.findAll({
             where: {
                 booking_id: req.booking_id,
                 status: 1
             },
-
             include: [{
                 model: ParticipantStat,
                 attributes: ['score'],
             }]
-
         });
-
+        var scoreBoard = [];
+        active_players.map((players, index) => {
+            if (players.target == 'left') {
+                const left = {
+                    id: players.id,
+                    participant_id: players.participant_id,
+                    booking_id: players.booking_id,
+                    target: players.target,
+                };
+                const score = players.ParticipantStats;
+                const leftScore = [];
+                score.map((scoreboard, index) => {
+                    leftScore.push({
+                        score: scoreboard.score
+                    });
+                });
+                activePlayers.push(left);
+                scoreBoard.push(leftScore)
+            }
+            else {
+                const right = {
+                    id: players.id,
+                    participant_id: players.participant_id,
+                    booking_id: players.booking_id,
+                    target: players.target,
+                };
+                const score = players.ParticipantStats;
+                const rightScore = [];
+                score.map((scoreboard, index) => {
+                    rightScore.push({
+                        score: scoreboard.score
+                    });
+                });
+                activePlayers.push(right);
+                scoreBoard.push(rightScore)
+            }
+        });
+        const all_data = {
+            'topScorer': topScorer,
+            'activePlayer': activePlayers,
+            'scoreBoard': scoreBoard,
+        }
+        return all_data;
+        // const active_players = await ParticipantTeams.findAll({
+        //     where: {
+        //         booking_id: req.booking_id,
+        //         status: 1
+        //     },
+        //     include: [{
+        //         model: ParticipantStat,
+        //         attributes: ['score'],
+        //     }]
+        // });
+        // const topScorer = [];
+        // const activePlayers = [];
+        // const winners = topFourParticipant.map((participants, index) => {
+        //     topScorer.push({
+        //         id: participants.id,
+        //         points:participants.total_score,
+        //         throws:participants.throws - participants.nu_of_throws,
+        //         name:participants.User.name
+        //     });
+        // })
+        // return topScorer;
         return {
-            topFourParticipant,
-            selectedParticipants
+            // topScorer,
+            // selectedParticipants
         };
     } catch (error) {
         console.error('Error in fetching particpant scroe or selected participants:', error);
         throw error;
     }
 }
-
 const updateParticipantDetails = async (req) => {
     const transaction = await db.sequelize.transaction();
     try {
         const data = req;
-
         for (let i = 0; i < data.length; i++) {
             // Update user's username
             const user = await User.findOne({
                 where: {
                     id: data[i].user_id,
-
                 },
-
             }, {
                 transaction
             });
@@ -762,18 +843,14 @@ const updateParticipantDetails = async (req) => {
                 user.name = data[i].name;
                 await user.save({ transaction });
             }
-
             // Update name in customer details table
             const customer = await CustomerDetails.findOne({
                 where: {
                     user_id: data[i].user_id,
-
                 },
-
             }, {
                 transaction
             });
-
             if (!customer) {
                 return {
                     status: false,
@@ -785,14 +862,12 @@ const updateParticipantDetails = async (req) => {
                 customer.last_name = data[i].name;
                 await customer.save({ transaction });
             }
-
             //Update other details in participants table
             const participants = await Participants.findOne({
                 where: {
                     user_id: data[i].user_id,
                     booking_id: data[i].booking_id,
                 },
-
             }, {
                 transaction
             });
@@ -819,9 +894,6 @@ const updateParticipantDetails = async (req) => {
         throw error;
     }
 }
-
-
-
 module.exports = {
     gameList,
     participantsList,
@@ -836,8 +908,4 @@ module.exports = {
     updatePartcipantStatus,
     selectedParticipants,
     updateParticipantDetails,
-
 }
-
-
-

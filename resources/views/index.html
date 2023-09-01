@@ -65,40 +65,46 @@
       //   status: 'undo',
       // });
 
-      // socket.emit(`available_time`,{
-      //   lane_id:7,
-      //   location_id:1
-      // });
+      
       // socket.emit('update_participant_status', {
       //   booking_id: 46,
       //   participant_id: 468,
       // })
-        // socket.emit('selected_participants',{
-        //   booking_id:46,
-        // });
+        socket.emit('selected_participants',{
+          booking_id:46,
+        });
         
-        socket.emit('update_participant_details',[
-          {
-            name:'Bray',
-            booking_id:46,
-            user_id:468,
-            playing_order:2,
-            status:'spectator',
-          },
-          {
-            name:'LookH',
-            booking_id:46,
-            user_id:467,
-            playing_order:3,
-            status:'spectator',
+        // socket.emit('update_participant_details',[
+        //   {
+        //     name:'Bray',
+        //     booking_id:46,
+        //     user_id:468,
+        //     playing_order:2,
+        //     status:'spectator',
+        //   },
+        //   {
+        //     name:'LookH',
+        //     booking_id:46,
+        //     user_id:467,
+        //     playing_order:3,
+        //     status:'spectator',
             
-          }
-        ]);
+        //   }
+        // ]);
+
+        // socket.emit('available_time',{
+        //   laneId:7,
+        //   booking_id:46,
+        //   location_id:1
+        // })
     });
 
-    socket.on('updateParticipantDetails',(data)=>{
-      console.log("participant data",data);
-    })
+    // socket.on('availableTime', (data) => {
+    //   console.log("availableTime", data)
+    // })
+    // socket.on('updateParticipantDetails',(data)=>{
+    //   console.log("participant data",data);
+    // })
     // socket.on('selectedParticipants',(data)=>{
     //   console.log("selected Partcipants",data);
     // })
@@ -109,9 +115,9 @@
     // socket.on('PageLog',(data)=>{
     //   console.log(data);
     // });
-    // socket.on('partcipantsList', (data) => {
-    //   console.log('Initial participants:', data);
-    // });
+    socket.on('partcipantsList', (data) => {
+      console.log('Initial participants:', data);
+    });
     // // socket.on('assignTargets', (data) => {
     //     console.log('assign target:', data);
     // });
@@ -139,9 +145,7 @@
     //  socket.on('undoThrows',(data)=>{
     //   console.log("undo_thorws",data)
     // })
-    // socket.on('availableTime', (data) => {
-    //   console.log("availableTime", data)
-    // })
+    
 
   </script>
 </body>
